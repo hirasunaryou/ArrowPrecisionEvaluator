@@ -10,7 +10,7 @@ struct MarkerReviewView: View {
                 .font(.headline)
 
             if viewModel.markerPoints.isEmpty {
-                Text("No markers detected. Tap on the photo to add markers manually.")
+                Text("No markers detected. Please add points manually.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -106,7 +106,7 @@ struct MarkerReviewView: View {
             }
             .buttonStyle(.borderedProminent)
 
-            Button("Clear All Markers") {
+            Button("Clear All Points") {
                 viewModel.markerPoints.removeAll()
             }
             .buttonStyle(.bordered)
