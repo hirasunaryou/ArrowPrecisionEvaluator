@@ -14,8 +14,17 @@ final class ColorSegmentationService: ColorSegmentationServiceProtocol {
         preset: ColorPreset,
         parameters: SegmentationParameters
     ) -> UIImage {
-        // MVP skeleton:
-        // 後で HSV segmentation の結果画像を返す
-        return image
+        guard
+            let result = HSVMarkerSegmentation.analyze(
+                image: image,
+                preset: preset,
+                parameters: parameters
+            ),
+            let previewImage = HSVMarkerSegmentation.maskPreviewImage(from: result)
+        else {
+            return image
+        }
+
+        return previewImage
     }
 }
