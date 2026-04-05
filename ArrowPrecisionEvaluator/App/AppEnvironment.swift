@@ -1,8 +1,9 @@
 import Foundation
 
 final class AppEnvironment: ObservableObject {
-    @Published var flowViewModel: MeasurementFlowViewModel
-    @Published var settingsViewModel: SettingsViewModel
+    // AppEnvironment owns long-lived view models and injects them into the view tree.
+    let flowViewModel: MeasurementFlowViewModel
+    let settingsViewModel: SettingsViewModel
 
     init() {
         let settingsStore = SettingsStore()

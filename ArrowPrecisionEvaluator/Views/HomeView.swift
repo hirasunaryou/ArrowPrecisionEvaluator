@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @EnvironmentObject private var environment: AppEnvironment
+    @EnvironmentObject private var flowViewModel: MeasurementFlowViewModel
     @StateObject private var viewModel = HomeViewModel()
 
     var body: some View {
@@ -20,12 +20,12 @@ struct HomeView: View {
 
             VStack(spacing: 12) {
                 Button("Start New Measurement") {
-                    environment.flowViewModel.startNewMeasurement()
+                    flowViewModel.startNewMeasurement()
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("Settings") {
-                    environment.flowViewModel.goToSettings()
+                    flowViewModel.goToSettings()
                 }
                 .buttonStyle(.bordered)
             }
