@@ -15,7 +15,9 @@ final class TargetPointViewModel: ObservableObject {
 
         if let existingTarget {
             usesCenterTarget = existingTarget.usesCenter
-            targetPointPx = sanitizedImagePoint(CGPoint(existingTarget.pointPx), imageSize: imageSize)
+            // `CodablePoint` is an app model type; convert explicitly via `cgPoint` to avoid
+            // colliding with `CGPoint`'s Codable initializer (`init(from:)`).
+            targetPointPx = sanitizedImagePoint(existingTarget.pointPx.cgPoint, imageSize: imageSize)
             if existingTarget.usesCenter {
                 setCenter(in: imageSize)
             }
