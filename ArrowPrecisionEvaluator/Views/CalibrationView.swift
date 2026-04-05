@@ -51,26 +51,43 @@ struct CalibrationView: View {
                     .fill(Color.gray.opacity(0.15))
 
                 if let image = environment.flowViewModel.draft.originalImage {
+                    let mapper = AspectFitImageCoordinateMapper(
+                        imageSize: image.size,
+                        containerSize: proxy.size
+                    )
+
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
-                }
 
-                ForEach(Array(viewModel.corners.enumerated()), id: \.offset) { index, point in
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 24, height: 24)
-                        .position(point)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    viewModel.moveCorner(at: index, to: value.location)
-                                }
-                        )
+                    ForEach(Array(viewModel.corners.enumerated()), id: \.offset) { index, point in
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 24, height: 24)
+                            // Image-space -> view-space conversion for rendering.
+                            .position(mapper.viewPoint(fromImagePoint: point))
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        // View-space -> image-space conversion for storage.
+                                        viewModel.moveCorner(at: index, toDisplayedPoint: value.location, mapper: mapper)
+                                    }
+                            )
+                    }
                 }
             }
         }
         .frame(height: 320)
         .border(Color.gray.opacity(0.4))
+        .onAppear {
+            if let image = environment.flowViewModel.draft.originalImage {
+                viewModel.initializeCornersIfNeeded(imageSize: image.size)
+            }
+        }
+        .onChange(of: environment.flowViewModel.draft.originalImage?.size) { _, newSize in
+            if let newSize {
+                viewModel.initializeCornersIfNeeded(imageSize: newSize)
+            }
+        }
     }
 }
