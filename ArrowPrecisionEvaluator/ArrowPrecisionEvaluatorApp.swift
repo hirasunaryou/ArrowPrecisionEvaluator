@@ -6,7 +6,9 @@ struct ArrowPrecisionEvaluatorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            // RootView observes flowViewModel directly so NavigationStack reacts
+            // immediately when the path changes from nested views.
+            RootView(flowViewModel: environment.flowViewModel)
                 .environmentObject(environment)
         }
     }

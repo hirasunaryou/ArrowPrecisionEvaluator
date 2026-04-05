@@ -2,14 +2,15 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var environment: AppEnvironment
+    @ObservedObject var flowViewModel: MeasurementFlowViewModel
 
     var body: some View {
-        NavigationStack(path: $environment.flowViewModel.path) {
-            HomeView()
+        NavigationStack(path: $flowViewModel.path) {
+            HomeView(flowViewModel: flowViewModel)
                 .navigationDestination(for: AppScreen.self) { screen in
                     switch screen {
                     case .home:
-                        HomeView()
+                        HomeView(flowViewModel: flowViewModel)
                     case .acquisition:
                         ImageAcquisitionView()
                     case .calibration:

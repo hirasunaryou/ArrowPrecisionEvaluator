@@ -1,8 +1,12 @@
 import Foundation
 
 final class AppEnvironment: ObservableObject {
-    @Published var flowViewModel: MeasurementFlowViewModel
-    @Published var settingsViewModel: SettingsViewModel
+    // NOTE:
+    // These child view models are long-lived shared dependencies.
+    // They are intentionally constants so their own @Published state
+    // is observed directly by views that bind to them.
+    let flowViewModel: MeasurementFlowViewModel
+    let settingsViewModel: SettingsViewModel
 
     init() {
         let settingsStore = SettingsStore()
