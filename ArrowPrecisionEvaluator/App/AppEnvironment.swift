@@ -1,8 +1,11 @@
 import Foundation
 
 final class AppEnvironment: ObservableObject {
-    @Published var flowViewModel: MeasurementFlowViewModel
-    @Published var settingsViewModel: SettingsViewModel
+    // AppEnvironment owns long-lived view models and injects them into the view tree.
+    let flowViewModel: MeasurementFlowViewModel
+    // `var` is intentional: SwiftUI bindings in SettingsView need a writable key path
+    // from AppEnvironment -> settingsViewModel -> settings.*
+    var settingsViewModel: SettingsViewModel
 
     init() {
         let settingsStore = SettingsStore()

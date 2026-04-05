@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct RootView: View {
-    @EnvironmentObject private var environment: AppEnvironment
+    @EnvironmentObject private var flowViewModel: MeasurementFlowViewModel
 
     var body: some View {
-        NavigationStack(path: $environment.flowViewModel.path) {
+        NavigationStack(path: $flowViewModel.path) {
             HomeView()
                 .navigationDestination(for: AppScreen.self) { screen in
                     switch screen {
