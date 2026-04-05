@@ -7,6 +7,8 @@ final class ColorSegmentationViewModel: ObservableObject {
     @Published var minimumArea: Double = 30
     @Published var previewImage: UIImage?
     @Published private(set) var isPreviewUpdating = false
+    @Published private(set) var isPreviewStale = false
+    @Published private(set) var lastPreviewUpdatedAt: Date?
     @Published private(set) var previewComponentCount = 0
     @Published private(set) var previewPassingComponentCount = 0
 
@@ -22,6 +24,18 @@ final class ColorSegmentationViewModel: ObservableObject {
             sensitivity: sensitivity,
             minimumArea: minimumArea
         )
+    }
+
+    func updateColorPreset(_ preset: ColorPreset) {
+        guard selectedColorPreset != preset else { return }
+        selectedColorPreset = preset
+        isPreviewStale = true
+    }
+
+    func updateSensitivity(_ value: Double) {
+        guard sensitivity != value else { return }
+        sensitivity = value
+        isPreviewStale = true
     }
 
     func refreshPreviewImmediately(
@@ -74,6 +88,9 @@ final class ColorSegmentationViewModel: ObservableObject {
 
     func updateMinimumArea(_ area: Double) {
         minimumArea = area
+        // Minimum area changes do not alter the mask itself, but we still mark stale so the user
+        // can explicitly re-run preview + component stats with one clear action.
+        isPreviewStale = true
         updatePreviewComponentCount()
     }
 
@@ -85,12 +102,16 @@ final class ColorSegmentationViewModel: ObservableObject {
             previewComponentAreas = []
             previewComponentCount = 0
             previewPassingComponentCount = 0
+            lastPreviewUpdatedAt = nil
+            isPreviewStale = false
             return
         }
 
         previewImage = analysis.previewImage
         previewComponentAreas = analysis.componentAreas
         previewComponentCount = previewComponentAreas.count
+        lastPreviewUpdatedAt = Date()
+        isPreviewStale = false
         updatePreviewComponentCount()
     }
 

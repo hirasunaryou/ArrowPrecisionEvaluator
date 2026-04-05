@@ -3,11 +3,22 @@ import SwiftUI
 struct ColorSegmentationView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var viewModel = ColorSegmentationViewModel()
+    private static let previewDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Picker("Color", selection: $viewModel.selectedColorPreset) {
+                Picker(
+                    "Color",
+                    selection: Binding(
+                        get: { viewModel.selectedColorPreset },
+                        set: { viewModel.updateColorPreset($0) }
+                    )
+                ) {
                     ForEach(ColorPreset.allCases) { preset in
                         Text(preset.displayName).tag(preset)
                     }
@@ -16,7 +27,13 @@ struct ColorSegmentationView: View {
 
                 VStack(alignment: .leading) {
                     Text("Sensitivity: \(viewModel.sensitivity, specifier: "%.2f")")
-                    Slider(value: $viewModel.sensitivity, in: 0...1)
+                    Slider(
+                        value: Binding(
+                            get: { viewModel.sensitivity },
+                            set: { viewModel.updateSensitivity($0) }
+                        ),
+                        in: 0...1
+                    )
                     Text("Higher sensitivity widens HSV thresholds (more candidates, more noise).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -45,6 +62,28 @@ struct ColorSegmentationView: View {
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Button("Update Preview") {
+                        updatePreview()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(
+                        !viewModel.isPreviewStale
+                            || viewModel.isPreviewUpdating
+                            || environment.flowViewModel.draft.correctedImage == nil
+                    )
+
+                    if viewModel.isPreviewStale {
+                        Text("Parameters changed — tap Update Preview.")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    } else if let updatedAt = viewModel.lastPreviewUpdatedAt {
+                        Text("Preview updated at \(Self.previewDateFormatter.string(from: updatedAt)).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Group {
@@ -93,16 +132,14 @@ struct ColorSegmentationView: View {
         .navigationTitle("Color Segmentation")
         .onAppear {
             let settings = environment.flowViewModel.settings
-            viewModel.selectedColorPreset = settings.defaultColorPreset
-            viewModel.sensitivity = settings.defaultSensitivity
+            viewModel.updateColorPreset(settings.defaultColorPreset)
+            viewModel.updateSensitivity(settings.defaultSensitivity)
             viewModel.updateMinimumArea(settings.defaultMinimumMarkerArea)
             viewModel.refreshPreviewImmediately(
                 with: environment.flowViewModel.draft.correctedImage,
                 service: environment.flowViewModel.colorSegmentationService
             )
         }
-        .onChange(of: viewModel.selectedColorPreset) { _ in updatePreview() }
-        .onChange(of: viewModel.sensitivity) { _ in updatePreview() }
     }
 
     private func updatePreview() {
