@@ -91,6 +91,16 @@ final class CalibrationViewModel: ObservableObject {
         )
     }
 
+    func label(forCornerAt index: Int) -> String {
+        switch index {
+        case 0: return "TL"
+        case 1: return "TR"
+        case 2: return "BR"
+        case 3: return "BL"
+        default: return ""
+        }
+    }
+
     private func isPoint(_ point: CGPoint, insideImageSize imageSize: CGSize) -> Bool {
         point.x >= 0 && point.x <= imageSize.width && point.y >= 0 && point.y <= imageSize.height
     }
