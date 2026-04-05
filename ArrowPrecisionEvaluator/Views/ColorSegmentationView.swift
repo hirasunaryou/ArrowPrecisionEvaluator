@@ -20,11 +20,31 @@ struct ColorSegmentationView: View {
                     Text("Higher sensitivity widens HSV thresholds (more candidates, more noise).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if viewModel.isPreviewUpdating {
+                        Text("Updating preview…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Minimum Area: \(Int(viewModel.minimumArea)) px²")
-                    Slider(value: $viewModel.minimumArea, in: 1...200, step: 1)
+                    Slider(
+                        value: Binding(
+                            get: { viewModel.minimumArea },
+                            set: { viewModel.updateMinimumArea($0) }
+                        ),
+                        in: 1...5000,
+                        step: 1
+                    )
+                    Text("Applies to detected components (not the grayscale mask preview).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(
+                        "Preview components ≥ minimum area: \(viewModel.previewPassingComponentCount) / \(viewModel.previewComponentCount)"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
                 Group {
@@ -75,19 +95,18 @@ struct ColorSegmentationView: View {
             let settings = environment.flowViewModel.settings
             viewModel.selectedColorPreset = settings.defaultColorPreset
             viewModel.sensitivity = settings.defaultSensitivity
-            viewModel.minimumArea = settings.defaultMinimumMarkerArea
-            viewModel.refreshPreview(
+            viewModel.updateMinimumArea(settings.defaultMinimumMarkerArea)
+            viewModel.refreshPreviewImmediately(
                 with: environment.flowViewModel.draft.correctedImage,
                 service: environment.flowViewModel.colorSegmentationService
             )
         }
         .onChange(of: viewModel.selectedColorPreset) { _ in updatePreview() }
         .onChange(of: viewModel.sensitivity) { _ in updatePreview() }
-        .onChange(of: viewModel.minimumArea) { _ in updatePreview() }
     }
 
     private func updatePreview() {
-        viewModel.refreshPreview(
+        viewModel.schedulePreviewRefresh(
             with: environment.flowViewModel.draft.correctedImage,
             service: environment.flowViewModel.colorSegmentationService
         )
