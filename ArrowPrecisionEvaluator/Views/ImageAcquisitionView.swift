@@ -36,8 +36,8 @@ struct ImageAcquisitionView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .onChange(of: viewModel.selectedPhotoItem) { _, _ in
-                viewModel.loadSelectedPhoto()
+            .task(id: viewModel.selectedPhotoItem) {
+                await viewModel.loadSelectedPhoto()
             }
 
             if viewModel.isLoadingPhoto {

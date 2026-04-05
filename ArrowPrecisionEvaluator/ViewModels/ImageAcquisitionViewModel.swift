@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 
+@MainActor
 final class ImageAcquisitionViewModel: ObservableObject {
     @Published var selectedImage: UIImage?
     @Published var selectedPhotoItem: PhotosPickerItem?
@@ -12,40 +13,35 @@ final class ImageAcquisitionViewModel: ObservableObject {
         photoLoadingError = nil
     }
 
-    func loadSelectedPhoto() {
+    func loadSelectedPhoto() async {
         guard let selectedPhotoItem else { return }
 
         isLoadingPhoto = true
         photoLoadingError = nil
 
-        Task {
-            do {
-                guard let data = try await selectedPhotoItem.loadTransferable(type: Data.self) else {
-                    await MainActor.run {
-                        self.photoLoadingError = "Unable to read image data."
-                        self.isLoadingPhoto = false
-                    }
-                    return
-                }
-
-                guard let image = UIImage(data: data) else {
-                    await MainActor.run {
-                        self.photoLoadingError = "Selected asset is not a supported image."
-                        self.isLoadingPhoto = false
-                    }
-                    return
-                }
-
-                await MainActor.run {
-                    self.selectedImage = image
-                    self.isLoadingPhoto = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.photoLoadingError = error.localizedDescription
-                    self.isLoadingPhoto = false
-                }
+        do {
+            guard let data = try await selectedPhotoItem.loadTransferable(type: Data.self) else {
+                photoLoadingError = "Unable to read image data."
+                isLoadingPhoto = false
+                return
             }
+
+            try Task.checkCancellation()
+
+            guard let image = UIImage(data: data) else {
+                photoLoadingError = "Selected asset is not a supported image."
+                isLoadingPhoto = false
+                return
+            }
+
+            selectedImage = image
+            isLoadingPhoto = false
+        } catch is CancellationError {
+            // `task(id:)` cancels previous work when users pick another image quickly.
+            isLoadingPhoto = false
+        } catch {
+            photoLoadingError = error.localizedDescription
+            isLoadingPhoto = false
         }
     }
 }
