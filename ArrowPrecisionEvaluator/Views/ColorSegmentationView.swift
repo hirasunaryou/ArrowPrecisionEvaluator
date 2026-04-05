@@ -143,7 +143,8 @@ struct ColorSegmentationView: View {
     }
 
     private func updatePreview() {
-        viewModel.schedulePreviewRefresh(
+        // Explicit button action should reflect the latest UI state immediately.
+        viewModel.refreshPreviewImmediately(
             with: environment.flowViewModel.draft.correctedImage,
             service: environment.flowViewModel.colorSegmentationService
         )
