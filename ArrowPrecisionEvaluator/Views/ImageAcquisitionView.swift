@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ImageAcquisitionView: View {
     @EnvironmentObject private var environment: AppEnvironment
@@ -30,6 +31,26 @@ struct ImageAcquisitionView: View {
             }
             .buttonStyle(.borderedProminent)
 
+            PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
+                Label("Import from Photo Library", systemImage: "photo.on.rectangle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .onChange(of: viewModel.selectedPhotoItem) { _, _ in
+                viewModel.loadSelectedPhoto()
+            }
+
+            if viewModel.isLoadingPhoto {
+                ProgressView("Loading selected photo...")
+            }
+
+            if let photoLoadingError = viewModel.photoLoadingError {
+                Text(photoLoadingError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
             Button("Use This Image") {
                 environment.flowViewModel.draft.originalImage = viewModel.selectedImage
                 environment.flowViewModel.path.append(.calibration)
@@ -41,5 +62,9 @@ struct ImageAcquisitionView: View {
         }
         .padding()
         .navigationTitle("Acquire Image")
+        .onChange(of: viewModel.selectedImage) { _, image in
+            // Keep the flow draft in sync so downstream screens can reuse the latest selected asset.
+            environment.flowViewModel.draft.originalImage = image
+        }
     }
 }
