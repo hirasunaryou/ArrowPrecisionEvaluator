@@ -17,16 +17,19 @@ struct ColorSegmentationView: View {
                 VStack(alignment: .leading) {
                     Text("Sensitivity: \(viewModel.sensitivity, specifier: "%.2f")")
                     Slider(value: $viewModel.sensitivity, in: 0...1)
+                    Text("Higher sensitivity widens HSV thresholds (more candidates, more noise).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading) {
-                    Text("Minimum Area: \(Int(viewModel.minimumArea))")
+                    Text("Minimum Area: \(Int(viewModel.minimumArea)) px²")
                     Slider(value: $viewModel.minimumArea, in: 1...200, step: 1)
                 }
 
                 Group {
                     if let image = environment.flowViewModel.draft.correctedImage {
-                        Image(uiImage: image)
+                        Image(uiImage: viewModel.previewImage ?? image)
                             .resizable()
                             .scaledToFit()
                             .frame(maxHeight: 320)
@@ -73,6 +76,20 @@ struct ColorSegmentationView: View {
             viewModel.selectedColorPreset = settings.defaultColorPreset
             viewModel.sensitivity = settings.defaultSensitivity
             viewModel.minimumArea = settings.defaultMinimumMarkerArea
+            viewModel.refreshPreview(
+                with: environment.flowViewModel.draft.correctedImage,
+                service: environment.flowViewModel.colorSegmentationService
+            )
         }
+        .onChange(of: viewModel.selectedColorPreset) { _ in updatePreview() }
+        .onChange(of: viewModel.sensitivity) { _ in updatePreview() }
+        .onChange(of: viewModel.minimumArea) { _ in updatePreview() }
+    }
+
+    private func updatePreview() {
+        viewModel.refreshPreview(
+            with: environment.flowViewModel.draft.correctedImage,
+            service: environment.flowViewModel.colorSegmentationService
+        )
     }
 }

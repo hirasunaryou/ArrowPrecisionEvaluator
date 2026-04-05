@@ -17,9 +17,28 @@ final class MarkerDetectionService: MarkerDetectionServiceProtocol {
         parameters: SegmentationParameters,
         calibrationData: CalibrationData?
     ) -> [MarkerPoint] {
-        // Manual-first MVP behavior:
-        // No fake detections are injected so real-photo measurements are not polluted.
-        // Users can proceed to manual review and place markers themselves.
-        return []
+        guard let result = HSVMarkerSegmentation.analyze(
+            image: image,
+            preset: preset,
+            parameters: parameters
+        ) else {
+            return []
+        }
+
+        return result.components.map { component in
+            let xPx = component.centroidX
+            let yPx = component.centroidY
+            let xMm = calibrationData.map { xPx * $0.mmPerPixelX } ?? xPx
+            let yMm = calibrationData.map { yPx * $0.mmPerPixelY } ?? yPx
+
+            return MarkerPoint(
+                xPx: xPx,
+                yPx: yPx,
+                xMm: xMm,
+                yMm: yMm,
+                areaPx: Double(component.area),
+                isManuallyAdded: false
+            )
+        }
     }
 }

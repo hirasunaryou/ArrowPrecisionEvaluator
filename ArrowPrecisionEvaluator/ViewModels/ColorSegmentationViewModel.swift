@@ -12,4 +12,20 @@ final class ColorSegmentationViewModel: ObservableObject {
             minimumArea: minimumArea
         )
     }
+
+    func refreshPreview(
+        with image: UIImage?,
+        service: ColorSegmentationServiceProtocol
+    ) {
+        guard let image else {
+            previewImage = nil
+            return
+        }
+
+        previewImage = service.previewMask(
+            image: image,
+            preset: selectedColorPreset,
+            parameters: currentParameters()
+        )
+    }
 }
