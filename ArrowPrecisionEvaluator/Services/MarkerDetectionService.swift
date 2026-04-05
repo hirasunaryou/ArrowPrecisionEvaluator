@@ -17,8 +17,9 @@ final class MarkerDetectionService: MarkerDetectionServiceProtocol {
         parameters: SegmentationParameters,
         calibrationData: CalibrationData?
     ) -> [MarkerPoint] {
-        // MVP skeleton:
-        // 後で二値化 + 連結成分 + 重心計算へ差し替える
-        return SampleDataFactory.makeSampleMarkerPoints()
+        // Manual-first MVP behavior:
+        // No fake detections are injected so real-photo measurements are not polluted.
+        // Users can proceed to manual review and place markers themselves.
+        return []
     }
 }
