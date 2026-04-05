@@ -9,6 +9,12 @@ struct MarkerReviewView: View {
             Text("Detected Markers: \(viewModel.markerPoints.count)")
                 .font(.headline)
 
+            if viewModel.markerPoints.isEmpty {
+                Text("No markers detected. Tap on the photo to add markers manually.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             Picker("Edit Mode", selection: $viewModel.editMode) {
                 ForEach(MarkerReviewViewModel.EditMode.allCases) { mode in
                     Text(mode.title).tag(mode)
@@ -99,6 +105,12 @@ struct MarkerReviewView: View {
                 environment.flowViewModel.path.append(.analysis)
             }
             .buttonStyle(.borderedProminent)
+
+            Button("Clear All Markers") {
+                viewModel.markerPoints.removeAll()
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.markerPoints.isEmpty)
 
             Spacer()
         }

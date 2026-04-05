@@ -51,6 +51,15 @@ struct ColorSegmentationView: View {
                     environment.flowViewModel.path.append(.markerReview)
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button("Continue to Manual Review") {
+                    let parameters = viewModel.currentParameters()
+                    environment.flowViewModel.draft.selectedColorPreset = viewModel.selectedColorPreset
+                    environment.flowViewModel.draft.segmentationParameters = parameters
+                    environment.flowViewModel.draft.candidateMarkerPoints = []
+                    environment.flowViewModel.path.append(.markerReview)
+                }
+                .buttonStyle(.bordered)
             }
             .padding()
         }
