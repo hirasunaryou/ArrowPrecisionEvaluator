@@ -63,6 +63,7 @@ final class ColorSegmentationViewModel: ObservableObject {
 
         let preset = selectedColorPreset
         let sensitivity = sensitivity
+        let minimumArea = minimumArea
         isPreviewUpdating = true
 
         previewTask = Task {
@@ -77,7 +78,8 @@ final class ColorSegmentationViewModel: ObservableObject {
                 service.previewAnalysis(
                     image: image,
                     preset: preset,
-                    sensitivity: sensitivity
+                    sensitivity: sensitivity,
+                    minimumArea: minimumArea
                 )
             }.value
 
@@ -88,8 +90,7 @@ final class ColorSegmentationViewModel: ObservableObject {
 
     func updateMinimumArea(_ area: Double) {
         minimumArea = area
-        // Minimum area changes do not alter the mask itself, but we still mark stale so the user
-        // can explicitly re-run preview + component stats with one clear action.
+        // Minimum area affects which candidate centroids are highlighted in preview.
         isPreviewStale = true
         updatePreviewComponentCount()
     }
