@@ -12,7 +12,7 @@ struct TargetPointView: View {
                     viewModel.setCenter(in: image.size)
                 }
 
-            GeometryReader { _ in
+            GeometryReader { proxy in
                 ZStack {
                     Rectangle()
                         .fill(Color.gray.opacity(0.15))
@@ -21,26 +21,32 @@ struct TargetPointView: View {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
-                    }
 
-                    Circle()
-                        .stroke(Color.red, lineWidth: 3)
-                        .frame(width: 24, height: 24)
-                        .position(viewModel.targetPointPx)
+                        Circle()
+                            .stroke(Color.red, lineWidth: 3)
+                            .frame(width: 24, height: 24)
+                            .position(
+                                viewModel.displayedTargetPoint(
+                                    imageSize: image.size,
+                                    containerSize: proxy.size
+                                )
+                            )
+                    }
                 }
                 .contentShape(Rectangle())
-                .gesture(
-                    TapGesture()
-                        .onEnded {
-                            // placeholder
-                        }
-                )
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
-                            if !viewModel.usesCenterTarget {
-                                viewModel.targetPointPx = value.location
-                            }
+                            guard
+                                !viewModel.usesCenterTarget,
+                                let image = environment.flowViewModel.draft.correctedImage
+                            else { return }
+
+                            viewModel.updateTargetPoint(
+                                fromDisplayedPoint: value.location,
+                                imageSize: image.size,
+                                containerSize: proxy.size
+                            )
                         }
                 )
             }
@@ -63,10 +69,20 @@ struct TargetPointView: View {
         .padding()
         .navigationTitle("Target Point")
         .onAppear {
-            if let image = environment.flowViewModel.draft.correctedImage {
-                viewModel.setCenter(in: image.size)
-                viewModel.usesCenterTarget = environment.flowViewModel.settings.defaultUseCenterTarget
-            }
+            guard let image = environment.flowViewModel.draft.correctedImage else { return }
+            viewModel.initializeTargetPoint(
+                existingTarget: environment.flowViewModel.draft.targetPoint,
+                imageSize: image.size,
+                defaultUsesCenterTarget: environment.flowViewModel.settings.defaultUseCenterTarget
+            )
+        }
+        .onChange(of: environment.flowViewModel.draft.correctedImage?.size) { _, newSize in
+            guard let newSize else { return }
+            viewModel.initializeTargetPoint(
+                existingTarget: environment.flowViewModel.draft.targetPoint,
+                imageSize: newSize,
+                defaultUsesCenterTarget: environment.flowViewModel.settings.defaultUseCenterTarget
+            )
         }
     }
 }
