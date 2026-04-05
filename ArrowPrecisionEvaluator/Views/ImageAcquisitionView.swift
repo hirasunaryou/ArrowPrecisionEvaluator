@@ -40,12 +40,34 @@ struct ImageAcquisitionView: View {
                 await viewModel.loadSelectedPhoto()
             }
 
+            Button {
+                viewModel.startCameraCapture()
+            } label: {
+                Label("Capture with Camera", systemImage: "camera")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+
+#if targetEnvironment(simulator)
+            Text("Camera capture may be unavailable on Simulator. Use sample image or photo library import as fallback.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+#endif
+
             if viewModel.isLoadingPhoto {
                 ProgressView("Loading selected photo...")
             }
 
             if let photoLoadingError = viewModel.photoLoadingError {
                 Text(photoLoadingError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            if let cameraErrorMessage = viewModel.cameraErrorMessage {
+                Text(cameraErrorMessage)
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
@@ -65,6 +87,13 @@ struct ImageAcquisitionView: View {
         .onChange(of: viewModel.selectedImage) { _, image in
             // Keep the flow draft in sync so downstream screens can reuse the latest selected asset.
             environment.flowViewModel.draft.originalImage = image
+        }
+        .sheet(isPresented: $viewModel.isCameraSheetPresented) {
+            // Camera output is fed into the same selected-image state used by sample/library imports.
+            CameraImagePicker { image in
+                viewModel.applyCapturedImage(image)
+            }
+            .ignoresSafeArea()
         }
     }
 }
