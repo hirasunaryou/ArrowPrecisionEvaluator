@@ -8,6 +8,10 @@ final class CalibrationViewModel: ObservableObject {
     @Published var widthMmText: String = "420"
     @Published var heightMmText: String = "297"
 
+    /// Keep corrected images at a practical working resolution while respecting
+    /// the user-entered physical aspect ratio.
+    private let correctedLongSidePixels: CGFloat = 2000
+
     func initializeCornersIfNeeded(imageSize: CGSize) {
         guard imageSize.width > 0, imageSize.height > 0 else { return }
         guard corners.count != 4 || corners.contains(where: { !isPoint($0, insideImageSize: imageSize) }) else { return }
@@ -34,7 +38,7 @@ final class CalibrationViewModel: ObservableObject {
         moveCorner(at: index, to: mapper.imagePoint(fromViewPoint: displayedPoint), imageSize: mapper.imageSize)
     }
 
-    func buildCalibrationData(imageSize: CGSize) -> CalibrationData? {
+    func correctedOutputSize() -> CGSize? {
         guard
             let widthMm = Double(widthMmText),
             let heightMm = Double(heightMmText),
@@ -44,22 +48,47 @@ final class CalibrationViewModel: ObservableObject {
             return nil
         }
 
-        let widthPx = distance(from: corners[0], to: corners[1])
-        let heightPx = distance(from: corners[0], to: corners[3])
+        let aspectRatio = widthMm / heightMm
+        guard aspectRatio.isFinite, aspectRatio > 0 else { return nil }
 
-        guard widthPx > 0, heightPx > 0 else { return nil }
+        let widthPx: CGFloat
+        let heightPx: CGFloat
+        if aspectRatio >= 1 {
+            widthPx = correctedLongSidePixels
+            heightPx = correctedLongSidePixels / aspectRatio
+        } else {
+            widthPx = correctedLongSidePixels * aspectRatio
+            heightPx = correctedLongSidePixels
+        }
+
+        return CGSize(
+            width: max(1, widthPx.rounded()),
+            height: max(1, heightPx.rounded())
+        )
+    }
+
+    func buildCalibrationData(correctedImageSize: CGSize) -> CalibrationData? {
+        guard
+            let widthMm = Double(widthMmText),
+            let heightMm = Double(heightMmText),
+            widthMm > 0,
+            heightMm > 0,
+            correctedImageSize.width > 0,
+            correctedImageSize.height > 0,
+            corners.count == 4
+        else {
+            return nil
+        }
 
         return CalibrationData(
             cornersPx: corners.map(CodablePoint.init),
             physicalWidthMm: widthMm,
             physicalHeightMm: heightMm,
-            mmPerPixelX: widthMm / widthPx,
-            mmPerPixelY: heightMm / heightPx
+            // mm/px now matches the corrected image coordinate space used by
+            // target and marker screens.
+            mmPerPixelX: widthMm / Double(correctedImageSize.width),
+            mmPerPixelY: heightMm / Double(correctedImageSize.height)
         )
-    }
-
-    private func distance(from p1: CGPoint, to p2: CGPoint) -> Double {
-        hypot(p1.x - p2.x, p1.y - p2.y)
     }
 
     private func isPoint(_ point: CGPoint, insideImageSize imageSize: CGSize) -> Bool {

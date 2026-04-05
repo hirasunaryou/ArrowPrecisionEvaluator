@@ -25,15 +25,15 @@ struct CalibrationView: View {
 
                 Button("Apply Calibration") {
                     guard let image = environment.flowViewModel.draft.originalImage else { return }
-                    let imageSize = image.size
-                    guard let calibrationData = viewModel.buildCalibrationData(imageSize: imageSize) else { return }
+                    guard let correctedOutputSize = viewModel.correctedOutputSize() else { return }
+                    guard let calibrationData = viewModel.buildCalibrationData(correctedImageSize: correctedOutputSize) else { return }
 
                     environment.flowViewModel.draft.calibrationData = calibrationData
                     environment.flowViewModel.draft.correctedImage =
                         environment.flowViewModel.perspectiveCorrectionService.correct(
                             image: image,
                             corners: viewModel.corners,
-                            outputSize: image.size
+                            outputSize: correctedOutputSize
                         )
                     environment.flowViewModel.path.append(.targetPoint)
                 }

@@ -54,14 +54,16 @@ final class PerspectiveCorrectionService: PerspectiveCorrectionServiceProtocol {
             return image
         }
 
-        return UIImage(cgImage: cgImage, scale: image.scale, orientation: .up)
+        // Use scale 1 so UIImage.size directly matches corrected pixel coordinates
+        // used throughout the flow (target point, markers, mm conversion).
+        return UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
     }
 
     private func resolvedTargetSize(requestedSize: CGSize, fallbackExtent: CGRect) -> CGSize {
         if requestedSize.width > 0, requestedSize.height > 0 {
-            return requestedSize
+            return CGSize(width: requestedSize.width.rounded(), height: requestedSize.height.rounded())
         }
-        return CGSize(width: fallbackExtent.width, height: fallbackExtent.height)
+        return CGSize(width: fallbackExtent.width.rounded(), height: fallbackExtent.height.rounded())
     }
 
     private func normalizedCGImage(from image: UIImage) -> CGImage? {
