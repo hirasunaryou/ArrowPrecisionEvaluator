@@ -33,6 +33,10 @@ final class MeasurementFlowViewModel: ObservableObject {
         path.append(.settings)
     }
 
+    func goToSavedSessions() {
+        path.append(.savedSessions)
+    }
+
     func resetToHome() {
         path = []
     }

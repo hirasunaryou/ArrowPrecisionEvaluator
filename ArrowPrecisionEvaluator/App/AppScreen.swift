@@ -9,4 +9,5 @@ enum AppScreen: Hashable {
     case markerReview
     case analysis
     case settings
+    case savedSessions
 }

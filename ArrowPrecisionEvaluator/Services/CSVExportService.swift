@@ -2,6 +2,7 @@ import Foundation
 
 protocol CSVExportServiceProtocol {
     func export(session: SavedMeasurementSession) throws -> [URL]
+    func exportAll(sessions: [SavedMeasurementSession]) throws -> [URL]
 }
 
 final class CSVExportService: CSVExportServiceProtocol {
@@ -12,7 +13,7 @@ final class CSVExportService: CSVExportServiceProtocol {
     }
 
     func export(session: SavedMeasurementSession) throws -> [URL] {
-        let exportDirectory = try makeExportDirectory(sessionID: session.id)
+        let exportDirectory = try makeExportDirectory(suffix: session.id.uuidString)
 
         let summaryURL = exportDirectory.appendingPathComponent("session_summary.csv")
         let pointsURL = exportDirectory.appendingPathComponent("marker_points.csv")
@@ -23,12 +24,24 @@ final class CSVExportService: CSVExportServiceProtocol {
         return [summaryURL, pointsURL]
     }
 
-    private func makeExportDirectory(sessionID: UUID) throws -> URL {
+    func exportAll(sessions: [SavedMeasurementSession]) throws -> [URL] {
+        let exportDirectory = try makeExportDirectory(suffix: "all_sessions")
+
+        let summaryURL = exportDirectory.appendingPathComponent("all_sessions_summary.csv")
+        let pointsURL = exportDirectory.appendingPathComponent("all_sessions_marker_points.csv")
+
+        try makeAllSessionsSummaryCSV(sessions: sessions).write(to: summaryURL, atomically: true, encoding: .utf8)
+        try makeAllMarkerPointsCSV(sessions: sessions).write(to: pointsURL, atomically: true, encoding: .utf8)
+
+        return [summaryURL, pointsURL]
+    }
+
+    private func makeExportDirectory(suffix: String) throws -> URL {
         let timestamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let directory = fileManager.temporaryDirectory
             .appendingPathComponent("ArrowPrecisionEvaluator")
             .appendingPathComponent("exports")
-            .appendingPathComponent("\(timestamp)_\(sessionID.uuidString)")
+            .appendingPathComponent("\(timestamp)_\(suffix)")
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
@@ -91,6 +104,75 @@ final class CSVExportService: CSVExportServiceProtocol {
 
         if session.markerPoints.isEmpty {
             rows.append([csvCell(session.id.uuidString), "", "", "", "", "", "", "", ""].joined(separator: ","))
+        }
+
+        return rows.joined(separator: "\n")
+    }
+
+    private func makeAllSessionsSummaryCSV(sessions: [SavedMeasurementSession]) -> String {
+        var rows: [String] = []
+        rows.append("session_id,title,memo,created_at_iso8601,selected_color_preset,marker_count,centroid_x_mm,centroid_y_mm,mean_distance_to_target_mm,target_to_centroid_mm,grouping_diameter_mm,max_distance_mm")
+
+        for session in sessions {
+            rows.append(
+                [
+                    csvCell(session.id.uuidString),
+                    csvCell(session.title),
+                    csvCell(session.memo),
+                    csvCell(isoString(session.createdAt)),
+                    csvCell(session.selectedColorPreset?.rawValue ?? ""),
+                    csvCell(session.metrics.markerCount),
+                    csvCell(session.metrics.centroidXMm),
+                    csvCell(session.metrics.centroidYMm),
+                    csvCell(session.metrics.meanDistanceToTargetMm),
+                    csvCell(session.metrics.distanceFromTargetToCentroidMm),
+                    csvCell(session.metrics.groupingDiameterMm),
+                    csvCell(session.metrics.maxDistanceMm)
+                ].joined(separator: ",")
+            )
+        }
+
+        if sessions.isEmpty {
+            rows.append(["", "", "", "", "", "", "", "", "", "", "", ""].joined(separator: ","))
+        }
+
+        return rows.joined(separator: "\n")
+    }
+
+    private func makeAllMarkerPointsCSV(sessions: [SavedMeasurementSession]) -> String {
+        var rows: [String] = []
+        rows.append("session_id,session_title,session_created_at_iso8601,marker_index,marker_id,x_px,y_px,x_mm,y_mm,area_px,is_manually_added")
+
+        for session in sessions {
+            if session.markerPoints.isEmpty {
+                rows.append(
+                    [
+                        csvCell(session.id.uuidString),
+                        csvCell(session.title),
+                        csvCell(isoString(session.createdAt)),
+                        "", "", "", "", "", "", "", ""
+                    ].joined(separator: ",")
+                )
+                continue
+            }
+
+            for (index, point) in session.markerPoints.enumerated() {
+                rows.append(
+                    [
+                        csvCell(session.id.uuidString),
+                        csvCell(session.title),
+                        csvCell(isoString(session.createdAt)),
+                        csvCell(index),
+                        csvCell(point.id.uuidString),
+                        csvCell(point.xPx),
+                        csvCell(point.yPx),
+                        csvCell(point.xMm),
+                        csvCell(point.yMm),
+                        csvCell(point.areaPx),
+                        csvCell(point.isManuallyAdded)
+                    ].joined(separator: ",")
+                )
+            }
         }
 
         return rows.joined(separator: "\n")

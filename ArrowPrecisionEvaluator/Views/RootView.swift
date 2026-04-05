@@ -24,6 +24,8 @@ struct RootView: View {
                         AnalysisResultView()
                     case .settings:
                         SettingsView()
+                    case .savedSessions:
+                        SavedSessionsView()
                     }
                 }
         }

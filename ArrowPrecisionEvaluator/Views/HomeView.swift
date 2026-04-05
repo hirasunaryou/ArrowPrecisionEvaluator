@@ -24,6 +24,11 @@ struct HomeView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
+                Button("Saved Sessions / History") {
+                    flowViewModel.goToSavedSessions()
+                }
+                .buttonStyle(.bordered)
+
                 Button("Settings") {
                     flowViewModel.goToSettings()
                 }
