@@ -8,6 +8,7 @@ struct ArrowPrecisionEvaluatorApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(environment)
+                .environmentObject(environment.flowViewModel)
         }
     }
 }
