@@ -10,54 +10,70 @@ final class PerspectiveCorrectionService: PerspectiveCorrectionServiceProtocol {
     private let context = CIContext(options: nil)
 
     func correct(image: UIImage, corners: [CGPoint], outputSize: CGSize) -> UIImage {
-        guard
-            corners.count == 4,
-            let ciInput = CIImage(image: image)
-        else {
-            return image
+        guard corners.count == 4 else { return image }
+        guard image.size.width > 0, image.size.height > 0 else { return image }
+        guard let normalizedInput = normalizedCGImage(from: image) else { return image }
+
+        let sourceWidth = CGFloat(normalizedInput.width)
+        let sourceHeight = CGFloat(normalizedInput.height)
+
+        // Calibration points are stored in UIImage-space coordinates. Convert them into
+        // normalized pixel coordinates so Core Image can apply a stable projective warp.
+        let pixelScaleX = sourceWidth / image.size.width
+        let pixelScaleY = sourceHeight / image.size.height
+
+        func toCICoordinate(_ point: CGPoint) -> CGPoint {
+            let pixelPoint = CGPoint(x: point.x * pixelScaleX, y: point.y * pixelScaleY)
+            // UIKit is top-left origin; Core Image is bottom-left origin.
+            return CGPoint(x: pixelPoint.x, y: sourceHeight - pixelPoint.y)
         }
 
-        // Core Image coordinates use a bottom-left origin while UIKit uses top-left.
-        // The calibration UI stores points in UIKit image space, so we flip Y here.
-        func toCIVectorPoint(_ point: CGPoint, imageHeight: CGFloat) -> CGPoint {
-            CGPoint(x: point.x, y: imageHeight - point.y)
-        }
-
-        // Corner order from CalibrationViewModel: top-left, top-right, bottom-right, bottom-left.
-        let topLeft = toCIVectorPoint(corners[0], imageHeight: image.size.height)
-        let topRight = toCIVectorPoint(corners[1], imageHeight: image.size.height)
-        let bottomRight = toCIVectorPoint(corners[2], imageHeight: image.size.height)
-        let bottomLeft = toCIVectorPoint(corners[3], imageHeight: image.size.height)
+        // Corner order expected by the calibration screen:
+        // [top-left, top-right, bottom-right, bottom-left]
+        let topLeft = toCICoordinate(corners[0])
+        let topRight = toCICoordinate(corners[1])
+        let bottomRight = toCICoordinate(corners[2])
+        let bottomLeft = toCICoordinate(corners[3])
 
         let perspectiveFilter = CIFilter.perspectiveCorrection()
-        perspectiveFilter.inputImage = ciInput
-        perspectiveFilter.topLeft = CGPoint(x: topLeft.x, y: topLeft.y)
-        perspectiveFilter.topRight = CGPoint(x: topRight.x, y: topRight.y)
-        perspectiveFilter.bottomRight = CGPoint(x: bottomRight.x, y: bottomRight.y)
-        perspectiveFilter.bottomLeft = CGPoint(x: bottomLeft.x, y: bottomLeft.y)
+        perspectiveFilter.inputImage = CIImage(cgImage: normalizedInput)
+        perspectiveFilter.topLeft = topLeft
+        perspectiveFilter.topRight = topRight
+        perspectiveFilter.bottomRight = bottomRight
+        perspectiveFilter.bottomLeft = bottomLeft
 
-        guard let corrected = perspectiveFilter.outputImage else {
-            return image
-        }
+        guard let corrected = perspectiveFilter.outputImage else { return image }
 
-        // Guarantee a predictable rectangular output size for downstream screens.
-        guard outputSize.width > 0, outputSize.height > 0 else {
-            guard let cgFallback = context.createCGImage(corrected, from: corrected.extent) else {
-                return image
-            }
-            return UIImage(cgImage: cgFallback, scale: image.scale, orientation: image.imageOrientation)
-        }
-
-        let sx = outputSize.width / corrected.extent.width
-        let sy = outputSize.height / corrected.extent.height
+        let targetSize = resolvedTargetSize(requestedSize: outputSize, fallbackExtent: corrected.extent)
         let scaled = corrected
-            .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
-            .cropped(to: CGRect(origin: .zero, size: outputSize))
+            .transformed(by: CGAffineTransform(scaleX: targetSize.width / corrected.extent.width,
+                                               y: targetSize.height / corrected.extent.height))
+            .cropped(to: CGRect(origin: .zero, size: targetSize))
 
-        guard let cgImage = context.createCGImage(scaled, from: CGRect(origin: .zero, size: outputSize)) else {
+        guard let cgImage = context.createCGImage(scaled, from: CGRect(origin: .zero, size: targetSize)) else {
             return image
         }
 
-        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: .up)
+    }
+
+    private func resolvedTargetSize(requestedSize: CGSize, fallbackExtent: CGRect) -> CGSize {
+        if requestedSize.width > 0, requestedSize.height > 0 {
+            return requestedSize
+        }
+        return CGSize(width: fallbackExtent.width, height: fallbackExtent.height)
+    }
+
+    private func normalizedCGImage(from image: UIImage) -> CGImage? {
+        let pixelWidth = Int(image.size.width * image.scale)
+        let pixelHeight = Int(image.size.height * image.scale)
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: pixelWidth, height: pixelHeight))
+        let normalized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: CGSize(width: pixelWidth, height: pixelHeight)))
+        }
+
+        return normalized.cgImage
     }
 }
