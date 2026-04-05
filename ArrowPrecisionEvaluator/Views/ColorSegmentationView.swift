@@ -52,7 +52,11 @@ struct ColorSegmentationView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Continue to Manual Review") {
+                Text("If detection is not ready, skip and place markers manually in the next screen.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button("Skip Auto Detection (Manual Review)") {
                     let parameters = viewModel.currentParameters()
                     environment.flowViewModel.draft.selectedColorPreset = viewModel.selectedColorPreset
                     environment.flowViewModel.draft.segmentationParameters = parameters
