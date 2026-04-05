@@ -20,11 +20,6 @@ struct ColorSegmentationView: View {
                     Text("Higher sensitivity widens HSV thresholds (more candidates, more noise).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if viewModel.isPreviewUpdating {
-                        Text("Updating preview…")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -45,6 +40,32 @@ struct ColorSegmentationView: View {
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 12) {
+                    Button("Update Preview") {
+                        updatePreview()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canUpdatePreview)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if viewModel.isPreviewUpdating {
+                            Text("Updating preview…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if viewModel.isPreviewStale {
+                            Text("Parameters changed — tap Update Preview.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        } else if let date = viewModel.lastPreviewUpdatedAt {
+                            Text("Preview updated: \(date.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Spacer()
                 }
 
                 Group {
@@ -101,12 +122,18 @@ struct ColorSegmentationView: View {
                 service: environment.flowViewModel.colorSegmentationService
             )
         }
-        .onChange(of: viewModel.selectedColorPreset) { _ in updatePreview() }
-        .onChange(of: viewModel.sensitivity) { _ in updatePreview() }
+        .onChange(of: viewModel.selectedColorPreset) { _ in viewModel.markPreviewStale() }
+        .onChange(of: viewModel.sensitivity) { _ in viewModel.markPreviewStale() }
+    }
+
+    private var canUpdatePreview: Bool {
+        environment.flowViewModel.draft.correctedImage != nil &&
+            viewModel.isPreviewStale &&
+            !viewModel.isPreviewUpdating
     }
 
     private func updatePreview() {
-        viewModel.schedulePreviewRefresh(
+        viewModel.refreshPreviewImmediately(
             with: environment.flowViewModel.draft.correctedImage,
             service: environment.flowViewModel.colorSegmentationService
         )

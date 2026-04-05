@@ -7,6 +7,8 @@ final class ColorSegmentationViewModel: ObservableObject {
     @Published var minimumArea: Double = 30
     @Published var previewImage: UIImage?
     @Published private(set) var isPreviewUpdating = false
+    @Published private(set) var isPreviewStale = false
+    @Published private(set) var lastPreviewUpdatedAt: Date?
     @Published private(set) var previewComponentCount = 0
     @Published private(set) var previewPassingComponentCount = 0
 
@@ -31,6 +33,10 @@ final class ColorSegmentationViewModel: ObservableObject {
         schedulePreviewRefresh(with: image, service: service, debounceNanoseconds: 0)
     }
 
+    func markPreviewStale() {
+        isPreviewStale = true
+    }
+
     func schedulePreviewRefresh(
         with image: UIImage?,
         service: ColorSegmentationServiceProtocol,
@@ -44,6 +50,8 @@ final class ColorSegmentationViewModel: ObservableObject {
             previewComponentCount = 0
             previewPassingComponentCount = 0
             isPreviewUpdating = false
+            isPreviewStale = false
+            lastPreviewUpdatedAt = nil
             return
         }
 
@@ -52,7 +60,7 @@ final class ColorSegmentationViewModel: ObservableObject {
         isPreviewUpdating = true
 
         previewTask = Task {
-            // Debounce slider-driven updates so we do not run HSV segmentation for every tick.
+            // Optional debounce is kept for callers that may choose non-immediate refresh behavior.
             if debounceNanoseconds > 0 {
                 try? await Task.sleep(nanoseconds: debounceNanoseconds)
             }
@@ -74,6 +82,9 @@ final class ColorSegmentationViewModel: ObservableObject {
 
     func updateMinimumArea(_ area: Double) {
         minimumArea = area
+        // Minimum area affects the detection result even though the mask image may look unchanged.
+        // Keep it immediate in UI and mark preview state as stale until user refreshes explicitly.
+        isPreviewStale = true
         updatePreviewComponentCount()
     }
 
@@ -85,12 +96,15 @@ final class ColorSegmentationViewModel: ObservableObject {
             previewComponentAreas = []
             previewComponentCount = 0
             previewPassingComponentCount = 0
+            isPreviewStale = true
             return
         }
 
         previewImage = analysis.previewImage
         previewComponentAreas = analysis.componentAreas
         previewComponentCount = previewComponentAreas.count
+        isPreviewStale = false
+        lastPreviewUpdatedAt = Date()
         updatePreviewComponentCount()
     }
 
