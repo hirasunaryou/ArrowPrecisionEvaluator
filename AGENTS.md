@@ -39,7 +39,6 @@ Every PR should include:
 Project rules:
 - Keep the repo runnable on Windows + Python 3.12.
 - Prefer existing deps (numpy/pandas/matplotlib). If you need extra libs, add them as OPTIONAL and guard imports in notebooks with a clear install note.
-- Each notebook must be "tutorial style": Markdown (concept + formula) -> code -> printed numeric examples -> plot -> "what to observe" bullets.
 - Add docs/ markdown files that summarize key takeaways and link to notebooks.
 - Do not rewrite core engine logic unless explicitly requested.
 
