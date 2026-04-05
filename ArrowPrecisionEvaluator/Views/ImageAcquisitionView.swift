@@ -40,12 +40,34 @@ struct ImageAcquisitionView: View {
                 await viewModel.loadSelectedPhoto()
             }
 
+            Button {
+                viewModel.beginCameraCapture()
+            } label: {
+                Label("Capture with Camera", systemImage: "camera")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+
+#if targetEnvironment(simulator)
+            Text("Simulator note: Camera capture is typically unavailable in iOS Simulator. Use sample image or photo library import.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+#endif
+
             if viewModel.isLoadingPhoto {
                 ProgressView("Loading selected photo...")
             }
 
             if let photoLoadingError = viewModel.photoLoadingError {
                 Text(photoLoadingError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            if let cameraAlertMessage = viewModel.cameraAlertMessage {
+                Text(cameraAlertMessage)
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
@@ -62,6 +84,18 @@ struct ImageAcquisitionView: View {
         }
         .padding()
         .navigationTitle("Acquire Image")
+        .sheet(isPresented: $viewModel.isShowingCamera) {
+            CameraCapturePicker(
+                onImageCaptured: { image in
+                    viewModel.isShowingCamera = false
+                    viewModel.applyCapturedImage(image)
+                },
+                onCancel: {
+                    viewModel.isShowingCamera = false
+                }
+            )
+            .ignoresSafeArea()
+        }
         .onChange(of: viewModel.selectedImage) { _, image in
             // Keep the flow draft in sync so downstream screens can reuse the latest selected asset.
             environment.flowViewModel.draft.originalImage = image
